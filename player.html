@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Story Player</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            background-color: #121212;
+            color: white;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .player-container {
+            max-width: 380px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .cd-frame {
+            width: 280px;
+            height: 280px;
+            border-radius: 50%;
+            background-color: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 30px auto;
+            padding: 10px;
+            box-shadow: 0 0 30px rgba(255,255,255,0.15);
+            position: relative;
+        }
+
+        .cd-frame img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .download-indicator {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #27ae60;
+            color: white;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .cd-frame.has-download .download-indicator {
+            opacity: 1;
+        }
+
+        .story-title {
+            font-size: 22px;
+            font-weight: 600;
+            margin: 25px 0 15px;
+            color: #fff;
+        }
+
+        .progress-container {
+            width: 100%;
+            margin: 15px 0;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background-color: #333;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress {
+            height: 100%;
+            background-color: #ff5722;
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+
+        .time-display {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            color: #aaa;
+            margin-top: 5px;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 35px;
+        }
+
+        .control-btn {
+            background-color: #333;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 64px;
+            height: 64px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .control-btn:hover {
+            background-color: #444;
+        }
+
+        .play-pause {
+            font-size: 32px;
+        }
+
+        .back-button {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .back-button:hover {
+            color: #3498db;
+        }
+        
+        /* Speed control buttons */
+        .speed-controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .speed-btn {
+            background-color: #333;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .speed-btn:hover {
+            background-color: #444;
+        }
+        
+        /* Related stories section */
+        .related-stories {
+            margin-top: 40px;
+            width: 100%;
+        }
+        
+        .related-section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 15px;
+        }
+        
+        .related-stories-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 15px;
+        }
+        
+        .related-story-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+            transition: transform 0.2s ease;
+        }
+        
+        .related-story-card:hover {
+            transform: translateY(-3px);
+        }
+        
+        .related-story-image {
+            width: 100%;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 6px 6px 0 0;
+        }
+        
+        .related-story-info {
+            padding: 8px;
+        }
+        
+        .related-story-title {
+            font-size: 14px;
+            font-weight: 500;
+            line-height: 1.2;
+            color: #fff;
+        }
+        
+        /* Save button */
+        .save-button {
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 10px 16px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .save-button:hover {
+            background-color: #219653;
+        }
+        
+        .save-icon {
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <button class="back-button" onclick="goBack()">←</button>
+    
+    <div class="player-container">
+        <div class="cd-frame" id="cdFrame">
+            <div class="download-indicator">✓</div>
+            <img id="storyImage" src="" alt="Story Image">
+        </div>
+        
+        <!-- Speed controls -->
+        <div class="speed-controls">
+            <button class="speed-btn" id="slowSpeedBtn">0.75x</button>
+            <button class="speed-btn" id="normalSpeedBtn">1x</button>
+            <button class="speed-btn" id="fastSpeedBtn">1.25x</button>
+        </div>
+        
+        <h1 id="storyTitle" class="story-title"></h1>
+        
+        <div class="progress-container">
+            <div class="progress-bar">
+                <div class="progress" id="progressBar"></div>
+            </div>
+            <div class="time-display">
+                <span id="currentTime">0:00</span>
+                <span id="totalTime">0:00</span>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button class="control-btn" id="rewindBtn">⏪</button>
+            <button class="control-btn play-pause" id="playPauseBtn">▶️</button>
+            <button class="control-btn" id="forwardBtn">⏩</button>
+        </div>
+        
+        <!-- Related stories section -->
+        <div class="related-stories">
+            <h3 class="related-section-title">Related Stories</h3>
+            <div class="related-stories-grid" id="relatedStories">
+                <!-- Related stories will be populated here -->
+            </div>
+        </div>
+        
+        <button class="save-button" id="saveButton">
+            <span class="save-icon">💾</span>
+            Download Story
+        </button>
+    </div>
+
+    <audio id="audioElement" preload="auto"></audio>
+
+    <script>
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const storyId = urlParams.get('storyId');
+        const audioUrl = decodeURIComponent(urlParams.get('audioUrl'));
+        const title = decodeURIComponent(urlParams.get('title'));
+        const thumbnail = decodeURIComponent(urlParams.get('thumbnail'));
+
+        // DOM elements
+        const audio = document.getElementById('audioElement');
+        const storyTitle = document.getElementById('storyTitle');
+        const storyImage = document.getElementById('storyImage');
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const rewindBtn = document.getElementById('rewindBtn');
+        const forwardBtn = document.getElementById('forwardBtn');
+        const progressBar = document.getElementById('progressBar');
+        const currentTimeEl = document.getElementById('currentTime');
+        const totalTimeEl = document.getElementById('totalTime');
+        const cdFrame = document.getElementById('cdFrame');
+        const saveButton = document.getElementById('saveButton');
+
+        // Audio state
+        let isPlaying = false;
+        let currentPosition = 0;
+
+        // Initialize player
+        function initPlayer() {
+            storyTitle.textContent = title;
+            storyImage.src = thumbnail;
+            
+            // Load audio
+            audio.src = audioUrl;
+            
+            // Try to restore previous position
+            const savedPosition = localStorage.getItem(`lastPosition_${storyId}`);
+            if (savedPosition) {
+                audio.currentTime = parseFloat(savedPosition);
+            }
+            
+            // Check if story is downloaded
+            if (window.mauiInterop && window.mauiInterop.isStoryDownloaded(storyId)) {
+                cdFrame.classList.add('has-download');
+                
+                // Use local file if available
+                const localUrl = window.mauiInterop.getLocalAudioUrl(storyId);
+                if (localUrl) {
+                    audio.src = localUrl;
+                }
+            }
+        }
+
+        // Event listeners
+        playPauseBtn.addEventListener('click', togglePlayPause);
+        rewindBtn.addEventListener('click', () => seekAudio(-10));
+        forwardBtn.addEventListener('click', () => seekAudio(10));
+        audio.addEventListener('timeupdate', updateProgress);
+        audio.addEventListener('ended', () => {
+            isPlaying = false;
+            updatePlayPauseButton();
+        });
+        audio.addEventListener('loadedmetadata', () => {
+            updateTotalTime();
+        });
+
+        function togglePlayPause() {
+            if (isPlaying) {
+                pauseAudio();
+            } else {
+                playAudio();
+            }
+        }
+
+        function playAudio() {
+            audio.play().catch(e => console.log('Playback error:', e));
+            isPlaying = true;
+            updatePlayPauseButton();
+            
+            // Notify indexpage about playback status
+            window.parent.postMessage({
+                type: 'audioUpdate',
+                isPlaying: true,
+                title: title,
+                category: getCategoryFromTitle(title),
+                thumbnail: thumbnail
+            }, '*');
+        }
+
+        function pauseAudio() {
+            audio.pause();
+            isPlaying = false;
+            updatePlayPauseButton();
+            
+            // Notify index page about playback status
+            window.parent.postMessage({
+                type: 'audioUpdate',
+                isPlaying: false,
+                title: title,
+                category: getCategoryFromTitle(title),
+                thumbnail: thumbnail
+            }, '*');
+        }
+
+        function seekAudio(seconds) {
+            if (audio.duration) {
+                audio.currentTime = Math.max(0, Math.min(audio.duration, audio.currentTime + seconds));
+            }
+        }
+
+        function updatePlayPauseButton() {
+            playPauseBtn.textContent = isPlaying ? '⏸️' : '▶️';
+        }
+
+        function updateProgress() {
+            if (!audio.duration) return;
+            
+            const percent = (audio.currentTime / audio.duration) * 100;
+            progressBar.style.width = `${percent}%`;
+            
+            // Update current time
+            const currentMin = Math.floor(audio.currentTime / 60);
+            const currentSec = Math.floor(audio.currentTime % 60);
+            currentTimeEl.textContent = `${currentMin}:${currentSec.toString().padStart(2, '0')}`;
+        }
+
+        function updateTotalTime() {
+            if (!audio.duration) return;
+            
+            const totalMin = Math.floor(audio.duration / 60);
+            const totalSec = Math.floor(audio.duration % 60);
+            totalTimeEl.textContent = `${totalMin}:${totalSec.toString().padStart(2, '0')}`;
+        }
+
+        // Speed control functions
+        document.getElementById('slowSpeedBtn').addEventListener('click', () => changeSpeed(0.75));
+        document.getElementById('normalSpeedBtn').addEventListener('click', () => changeSpeed(1));
+        document.getElementById('fastSpeedBtn').addEventListener('click', () => changeSpeed(1.25));
+
+        function changeSpeed(speed) {
+            audio.playbackRate = speed;
+        }
+
+        // Go back to story list
+        function goBack() {
+            window.history.back();
+        }
+
+        // Save position when navigating away
+        window.addEventListener('beforeunload', () => {
+            localStorage.setItem(`lastPosition_${storyId}`, audio.currentTime.toString());
+        });
+
+        // Initialize player when page loads
+        window.addEventListener('load', initPlayer);
+
+        // Save button functionality
+        saveButton.addEventListener('click', () => {
+            if (window.mauiInterop && window.mauiInterop.downloadStory) {
+                window.mauiInterop.downloadStory(storyId, audioUrl, title, thumbnail);
+            }
+        });
+
+        // Helper function to get category from title
+        function getCategoryFromTitle(title) {
+            if (title.includes("Islamic") || title.includes("Prophet")) {
+                return "Islamic Stories";
+            } else if (title.includes("Moral") || 
+                      title.includes("Ant") || 
+                      title.includes("Grasshopper") ||
+                      title.includes("Boy") || 
+                      title.includes("Wolf") ||
+                      title.includes("Tortoise") || 
+                      title.includes("Hare") ||
+                      title.includes("Lion") || 
+                      title.includes("Mouse")) {
+                return "Moral Stories";
+            }
+            return "Stories";
+        }
+    </script>
+</body>
+</html>
